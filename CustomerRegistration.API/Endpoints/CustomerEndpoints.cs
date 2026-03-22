@@ -1,3 +1,5 @@
+using Amazon;
+using Amazon.DynamoDBv2;
 using CustomerRegistration.API.Database;
 using CustomerRegistration.API.Domain;
 using CustomerRegistration.API.Endpoints.Models;
@@ -7,13 +9,15 @@ namespace CustomerRegistration.API.Endpoints;
 public static class CustomerGetEndpoint
 {
 
-  public static List<CustomerPostEndpointResponse> FetchAsync()
+  public static async Task<List<CustomerPostEndpointResponse>> FetchAsync(DynamoDbService service)
   {
-    var customers = CustomerDatabase.Fetch();
+    var customers = await service.GetAllItemsAsync<DatabaseCustomer>();
+
     var response = new List<CustomerPostEndpointResponse>();
-    foreach(Customer customer in customers)
+    foreach(DatabaseCustomer customer in customers)
     {
       response.Add(new CustomerPostEndpointResponse{
+        Id = customer.Id,
         Name = customer.Name
       });
     }
