@@ -32,14 +32,23 @@ public class DynamoDbService
 }
 
 // Example Data Model
-[DynamoDBTable("Customers")]
+[DynamoDBTable("customer-registration-dev")]
 public class DatabaseCustomer
 {
     [DynamoDBHashKey] // Partition Key
     public Guid Id { get; set; }
 
-    [DynamoDBRangeKey] // Sort Key
-    public DateTime CreatedAt { get; set; }
+    // In v4, if the standard converter is elusive,
+    // we use a long property to back the DateTime.
+    private DateTime _createdAt;
+
+    [DynamoDBProperty("CreatedAt")] 
+    // Maps the 'long' below to the 'CreatedAt' column
+    public long CreatedAt
+    {
+      get => new DateTimeOffset(_createdAt).ToUnixTimeSeconds();
+      set => _createdAt = DateTimeOffset.FromUnixTimeSeconds(value).UtcDateTime;
+    }
 
     public string Name { get; set; }
 

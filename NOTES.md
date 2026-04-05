@@ -28,3 +28,17 @@ dotnet build
 # Runing
 dotnet run --project CustomerRegistration.API/CustomerRegistration.API.csproj
 ```
+
+## API Calls Examples
+
+### GET
+
+```bash
+curl -X GET http://localhost:5297/
+```
+
+### POST
+
+```bash
+curl -X POST -H 'Content-Type: application/json' http://localhost:5297/ --data '{"Name": "Eric Silva"}'
+```

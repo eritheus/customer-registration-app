@@ -17,7 +17,8 @@ public static class CustomerGetEndpoint
             response.Add(new CustomerPostEndpointResponse
             {
                 Id = customer.Id,
-                Name = customer.Name
+                Name = customer.Name,
+                CreatedAt = customer.CreatedAt
             });
         }
 
@@ -29,12 +30,15 @@ public static class CustomerGetEndpoint
 
 public static class CustomerPostEndpoint
 {
-    public static void InsertAsync(CustomerPostEndpointRequest customer)
+    public static async Task InsertAsync(CustomerPostEndpointRequest customer, DynamoDbService service)
     {
-        CustomerDatabase.Insert(new Customer
-        {
-            Name = customer.Name
-        });
+      await service.SaveItemAsync(new DatabaseCustomer
+      {
+        Id = Guid.NewGuid(),
+        CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        Name = customer.Name
+      });
+
     }
 
 }
