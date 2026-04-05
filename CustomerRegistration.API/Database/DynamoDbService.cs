@@ -1,6 +1,5 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 
 public class DynamoDbService
 {
@@ -38,9 +37,13 @@ public class DatabaseCustomer
 {
     [DynamoDBHashKey] // Partition Key
     public Guid Id { get; set; }
-    
+
     [DynamoDBRangeKey] // Sort Key
-    public DateTime Timestamp { get; set; }
-    
+    public DateTime CreatedAt { get; set; }
+
     public string Name { get; set; }
+
+    public string TaxId { get; set; }
+
+    public bool IsActive { get; set; }
 }
