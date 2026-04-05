@@ -33,14 +33,31 @@ public class DynamoDbService
 }
 
 // Example Data Model
-[DynamoDBTable("Customers")]
+[DynamoDBTable("customer-registration-dev")]
 public class DatabaseCustomer
 {
     [DynamoDBHashKey] // Partition Key
     public Guid Id { get; set; }
-    
+
+    public long ExpiresAt { get; set; }
+
+    // 1. This is the property DynamoDB will see. 
+    // Being a 'long', it perfectly matches the 'Numeric' type in your DB.
     [DynamoDBRangeKey] // Sort Key
-    public DateTime Timestamp { get; set; }
-    
+    public long CreatedAt { get; set; }
+
+    // 2. This is a helper to let you work with DateTimeOffset in your code.
+    // [DynamoDBIgnore] ensures the SDK doesn't try to save this property too.
+    [DynamoDBIgnore]
+    public DateTimeOffset CreatedAtDate
+    {
+        get => DateTimeOffset.FromUnixTimeSeconds(CreatedAt);
+        set => CreatedAt = value.ToUnixTimeSeconds();
+    }
+
     public string Name { get; set; }
+
+    public string TaxId { get; set; }
+
+    public bool IsActive { get; set; }
 }
