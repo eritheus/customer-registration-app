@@ -1,5 +1,3 @@
-using CustomerRegistration.API.Database;
-using CustomerRegistration.API.Domain;
 using CustomerRegistration.API.Endpoints.Models;
 
 namespace CustomerRegistration.API.Endpoints;
@@ -17,7 +15,10 @@ public static class CustomerGetEndpoint
             response.Add(new CustomerPostEndpointResponse
             {
                 Id = customer.Id,
-                Name = customer.Name
+                Name = customer.Name,
+                CreatedAt = customer.CreatedAtDate,
+                TaxId = customer.TaxId,
+                IsActive = customer.IsActive
             });
         }
 
@@ -29,12 +30,18 @@ public static class CustomerGetEndpoint
 
 public static class CustomerPostEndpoint
 {
-    public static void InsertAsync(CustomerPostEndpointRequest customer)
+    public static async Task InsertAsync(CustomerPostEndpointRequest customer, DynamoDbService service)
     {
-        CustomerDatabase.Insert(new Customer
-        {
-            Name = customer.Name
-        });
+      await service.SaveItemAsync(new DatabaseCustomer
+      {
+        Id = Guid.NewGuid(), // melhorar
+        ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(10).ToUnixTimeSeconds(), // melhorar
+        CreatedAtDate = DateTimeOffset.UtcNow,
+        Name = customer.Name,
+        TaxId = customer.TaxId,
+        IsActive = customer.IsActive
+      });
+
     }
 
 }

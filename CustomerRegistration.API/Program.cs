@@ -18,6 +18,6 @@ builder.Services.AddScoped<DynamoDbService>();
 var app = builder.Build();
 
 app.MapGet("/", (DynamoDbService service) => CustomerGetEndpoint.FetchAsync(service));
-app.MapPost("/", ([FromBody] CustomerPostEndpointRequest request) => CustomerPostEndpoint.InsertAsync(request));
+app.MapPost("/", ([FromBody] CustomerPostEndpointRequest request, DynamoDbService service) => CustomerPostEndpoint.InsertAsync(request, service));
 
 app.Run();
