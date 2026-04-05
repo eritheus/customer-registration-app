@@ -1,5 +1,6 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
 
 public class DynamoDbService
 {
@@ -38,21 +39,39 @@ public class DatabaseCustomer
     [DynamoDBHashKey] // Partition Key
     public Guid Id { get; set; }
 
-    // In v4, if the standard converter is elusive,
-    // we use a long property to back the DateTime.
-    private DateTime _createdAt;
-
-    [DynamoDBProperty("CreatedAt")] 
-    // Maps the 'long' below to the 'CreatedAt' column
-    public long CreatedAt
-    {
-      get => new DateTimeOffset(_createdAt).ToUnixTimeSeconds();
-      set => _createdAt = DateTimeOffset.FromUnixTimeSeconds(value).UtcDateTime;
-    }
+    // Use the converter here
+    [DynamoDBProperty(typeof(DateTimeOffsetToTimestampConverter))]
+    public DateTimeOffset CreatedAt { get; set; }
 
     public string Name { get; set; }
 
     public string TaxId { get; set; }
 
     public bool IsActive { get; set; }
+}
+
+
+
+public class DateTimeOffsetToTimestampConverter : IPropertyConverter
+{
+    // C# -> DynamoDB (DateTimeOffset to Numeric)
+    public DynamoDBEntry ToEntry(object value)
+    {
+        if (value is DateTimeOffset dto)
+        {
+            return new Primitive { Value = dto.ToUnixTimeSeconds() };
+        }
+        return new Primitive { Value = null };
+    }
+
+    // DynamoDB -> C# (Numeric to DateTimeOffset)
+    public object FromEntry(DynamoDBEntry entry)
+    {
+        var primitive = entry as Primitive;
+        if (primitive != null && long.TryParse(primitive.Value.ToString(), out long timestamp))
+        {
+            return DateTimeOffset.FromUnixTimeSeconds(timestamp);
+        }
+        return default(DateTimeOffset);
+    }
 }

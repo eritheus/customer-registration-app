@@ -1,5 +1,3 @@
-using CustomerRegistration.API.Database;
-using CustomerRegistration.API.Domain;
 using CustomerRegistration.API.Endpoints.Models;
 
 namespace CustomerRegistration.API.Endpoints;
@@ -35,7 +33,7 @@ public static class CustomerPostEndpoint
       await service.SaveItemAsync(new DatabaseCustomer
       {
         Id = Guid.NewGuid(),
-        CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        CreatedAt = DateTimeOffset.UtcNow,
         Name = customer.Name
       });
 
