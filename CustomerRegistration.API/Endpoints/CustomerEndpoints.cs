@@ -16,7 +16,9 @@ public static class CustomerGetEndpoint
             {
                 Id = customer.Id,
                 Name = customer.Name,
-                CreatedAt = customer.CreatedAt
+                CreatedAt = customer.CreatedAtDate,
+                TaxId = customer.TaxId,
+                IsActive = customer.IsActive
             });
         }
 
@@ -32,9 +34,12 @@ public static class CustomerPostEndpoint
     {
       await service.SaveItemAsync(new DatabaseCustomer
       {
-        Id = Guid.NewGuid(),
-        CreatedAt = DateTimeOffset.UtcNow,
-        Name = customer.Name
+        Id = Guid.NewGuid(), // melhorar
+        ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(10).ToUnixTimeSeconds(), // melhorar
+        CreatedAtDate = DateTimeOffset.UtcNow,
+        Name = customer.Name,
+        TaxId = customer.TaxId,
+        IsActive = customer.IsActive
       });
 
     }

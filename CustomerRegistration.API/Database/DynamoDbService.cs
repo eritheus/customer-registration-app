@@ -39,39 +39,25 @@ public class DatabaseCustomer
     [DynamoDBHashKey] // Partition Key
     public Guid Id { get; set; }
 
-    // Use the converter here
-    [DynamoDBProperty(typeof(DateTimeOffsetToTimestampConverter))]
-    public DateTimeOffset CreatedAt { get; set; }
+    public long ExpiresAt { get; set; }
+
+    // 1. This is the property DynamoDB will see. 
+    // Being a 'long', it perfectly matches the 'Numeric' type in your DB.
+    [DynamoDBRangeKey] // Sort Key
+    public long CreatedAt { get; set; }
+
+    // 2. This is a helper to let you work with DateTimeOffset in your code.
+    // [DynamoDBIgnore] ensures the SDK doesn't try to save this property too.
+    [DynamoDBIgnore]
+    public DateTimeOffset CreatedAtDate
+    {
+        get => DateTimeOffset.FromUnixTimeSeconds(CreatedAt);
+        set => CreatedAt = value.ToUnixTimeSeconds();
+    }
 
     public string Name { get; set; }
 
     public string TaxId { get; set; }
 
     public bool IsActive { get; set; }
-}
-
-
-
-public class DateTimeOffsetToTimestampConverter : IPropertyConverter
-{
-    // C# -> DynamoDB (DateTimeOffset to Numeric)
-    public DynamoDBEntry ToEntry(object value)
-    {
-        if (value is DateTimeOffset dto)
-        {
-            return new Primitive { Value = dto.ToUnixTimeSeconds() };
-        }
-        return new Primitive { Value = null };
-    }
-
-    // DynamoDB -> C# (Numeric to DateTimeOffset)
-    public object FromEntry(DynamoDBEntry entry)
-    {
-        var primitive = entry as Primitive;
-        if (primitive != null && long.TryParse(primitive.Value.ToString(), out long timestamp))
-        {
-            return DateTimeOffset.FromUnixTimeSeconds(timestamp);
-        }
-        return default(DateTimeOffset);
-    }
 }
