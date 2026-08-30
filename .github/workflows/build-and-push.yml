@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Push
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: dotnet build CustomerRegistration.API/CustomerRegistration.API.csproj --configuration Release --no-restore
 
-  deploy:
+  push:
     needs: build
     runs-on: ubuntu-latest
     steps:
