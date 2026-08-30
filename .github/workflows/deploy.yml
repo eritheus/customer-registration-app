@@ -1,0 +1,120 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build and Push"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  AWS_REGION: us-east-2
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-dev:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # The cluster is torn down and re-created daily, so its ARN/ID isn't
+      # stable — discover it (and the service) at deploy time instead of
+      # hardcoding or storing it as a GitHub var/secret.
+      - name: Discover ECS cluster and service
+        run: |
+          set -euo pipefail
+
+          CLUSTER_ARN=$(aws ecs list-clusters --region "$AWS_REGION" \
+            --query "clusterArns[?contains(@, 'dev-registration')]" --output text | awk '{print $1}')
+          if [ -z "$CLUSTER_ARN" ]; then
+            echo "::error::No ECS cluster matching 'dev-registration' found in $AWS_REGION"
+            exit 1
+          fi
+
+          SERVICE_ARN=$(aws ecs list-services --cluster "$CLUSTER_ARN" --region "$AWS_REGION" \
+            --query "serviceArns[?contains(@, 'customer-registration')]" --output text | awk '{print $1}')
+          if [ -z "$SERVICE_ARN" ]; then
+            echo "::error::No ECS service matching 'customer-registration' found in cluster $CLUSTER_ARN"
+            exit 1
+          fi
+
+          echo "Cluster: $CLUSTER_ARN"
+          echo "Service: $SERVICE_ARN"
+          echo "ECS_CLUSTER=$CLUSTER_ARN" >> "$GITHUB_ENV"
+          echo "ECS_SERVICE=$SERVICE_ARN" >> "$GITHUB_ENV"
+
+      - name: Force new deployment (dev)
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION"
+
+      - name: Wait for service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
+
+  deploy-prod:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    # The "prod" GitHub Environment must have a required-reviewers protection
+    # rule configured (Settings > Environments > prod) so this job pauses for
+    # manual approval before it runs.
+    environment: prod
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Discover ECS cluster and service
+        run: |
+          set -euo pipefail
+
+          CLUSTER_ARN=$(aws ecs list-clusters --region "$AWS_REGION" \
+            --query "clusterArns[?contains(@, 'prod-registration')]" --output text | awk '{print $1}')
+          if [ -z "$CLUSTER_ARN" ]; then
+            echo "::error::No ECS cluster matching 'prod-registration' found in $AWS_REGION"
+            exit 1
+          fi
+
+          SERVICE_ARN=$(aws ecs list-services --cluster "$CLUSTER_ARN" --region "$AWS_REGION" \
+            --query "serviceArns[?contains(@, 'customer-registration')]" --output text | awk '{print $1}')
+          if [ -z "$SERVICE_ARN" ]; then
+            echo "::error::No ECS service matching 'customer-registration' found in cluster $CLUSTER_ARN"
+            exit 1
+          fi
+
+          echo "Cluster: $CLUSTER_ARN"
+          echo "Service: $SERVICE_ARN"
+          echo "ECS_CLUSTER=$CLUSTER_ARN" >> "$GITHUB_ENV"
+          echo "ECS_SERVICE=$SERVICE_ARN" >> "$GITHUB_ENV"
+
+      - name: Force new deployment (prod)
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION"
+
+      - name: Wait for service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
